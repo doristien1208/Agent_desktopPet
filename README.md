@@ -21,6 +21,21 @@
 - ✓ 雙 Agent 人格設定
 - ✓ 模擬 API 回應（測試用）
 
+### ✅ Phase 3: 身體與介面 - 已完成
+- ✓ 角色圖片顯示（Agent A & B）
+- ✓ Flex 佈局（橫向排列）
+- ✓ 對話氣泡系統（5 秒自動消失）
+- ✓ 滑鼠互動（hover 控制穿透）
+- ✓ 測試面板（可收合）
+- ✓ 淡入淡出動畫
+
+### ✅ Phase 4: 手腳與工具 - 已完成
+- ✓ Groq API 整合（llama-3.3-70b-versatile）
+- ✓ CLI 工具定義（execute_terminal_command）
+- ✓ 安全確認機制（使用者批准/拒絕）
+- ✓ 指令執行與結果回傳
+- ✓ 確認對話框 UI
+
 ## 📦 安裝與執行
 
 ### 1. 安裝依賴
@@ -28,13 +43,22 @@
 npm install
 ```
 
-### 2. 開發模式（推薦）
+### 2. 設定 Groq API Key
+```bash
+# 複製環境變數範本
+cp .env.example .env
+
+# 編輯 .env 檔案，填入你的 Groq API Key
+# GROQ_API_KEY=your_api_key_here
+```
+
+### 3. 開發模式（推薦）
 ```bash
 # 建置 Angular 並啟動 Electron
 npm run electron:dev
 ```
 
-### 3. 生產模式
+### 4. 生產模式
 ```bash
 # 先建置 Angular
 npm run build
@@ -54,28 +78,46 @@ Once the server is running, open your browser and navigate to `http://localhost:
 
 ```
 multiple_agent/
-├── main.js                          # Electron 主進程（含自主迴圈）
+├── main.js                          # Electron 主進程（含 CLI 確認處理）
+├── .env                             # 環境變數（含 Groq API Key）
 ├── .env.example                     # 環境變數範本
 ├── src/
 │   ├── app/
 │   │   ├── core/services/
-│   │   │   └── electron.service.ts  # IPC 通訊封裝
-│   │   ├── app.ts                   # 主元件（含測試代碼）
-│   │   └── app.html                 # 測試介面
-│   ├── backend/                     # Phase 2: Backend 邏輯
+│   │   │   └── electron.service.ts  # IPC 通訊封裝（含 Phase 4 方法）
+│   │   ├── app.ts                   # 主元件（含確認對話框邏輯）
+│   │   └── app.html                 # 桌面寵物介面 + 確認對話框
+│   ├── backend/                     # Backend 邏輯
 │   │   ├── time-manager.js          # 時間感知系統
-│   │   └── agent-manager.js         # Agent 邏輯管理
-│   └── assets/                      # 資源檔案（待加入角色圖片）
+│   │   └── agent-manager.js         # Agent 邏輯 + Groq API + CLI 工具
+│   └── assets/                      # 資源檔案
+│       ├── agent-a.png              # Agent A 角色圖片
+│       └── agent-b.png              # Agent B 角色圖片
 └── dist/                            # 建置輸出目錄
 ```
 
-## 🔧 Phase 2 功能測試
+## 🔧 功能測試
 
-### 基礎互動
-1. 輸入「你好」→ Agent A 或 B 會回應
+### 基礎對話（Phase 2）
+1. 輸入「你好」→ Agent A 或 B 會使用 Groq API 回應
 2. 輸入「你們好」→ 兩個 Agent 都會回應
 3. 輸入「Agent A」→ Agent A 回應
 4. 輸入「Agent B」→ Agent B 回應
+
+### 視覺互動（Phase 3）
+- **對話氣泡**：Agent 說話時會在角色左側顯示氣泡，5 秒後自動消失
+- **滑鼠穿透**：滑鼠移到角色或面板上時可點擊，移開後穿透桌面
+- **測試面板**：點擊黑色標題列可收合/展開
+
+### CLI 工具（Phase 4）
+試著詢問 Agent：
+- 「幫我查看當前目錄」
+- 「列出這個資料夾的檔案」
+- 「查看系統時間」
+
+當 Agent 想執行指令時，會彈出確認對話框：
+- ✅ **批准** - 執行指令並回傳結果給 Agent
+- ❌ **拒絕** - Agent 會知道你拒絕了操作
 
 ### 調試功能
 - 🎲 **觸發自主對話** - 手動觸發 Agent 自主聊天
@@ -86,23 +128,31 @@ multiple_agent/
 ### 自主對話測試
 1. 啟動應用後等待 30 秒
 2. 系統會自動檢查是否觸發自主對話
-3. 時間越長，觸發機率越高
-4. 觀察 Console 的 `[Autonomy Loop]` 輸出
+3. 時間越長，觸發機率越高（最高 70%）
+4. Agent 會根據時間流逝自主聊天
 
 ### Console 輸出
-開啟 Electron DevTools 查看詳細的 Backend 邏輯運作：
-- TimeManager 時間計算
-- AgentManager 對話管理
-- 發言權分配決策
-- 自主迴圈檢查
+開啟 Electron DevTools 查看詳細的運作：
+- Groq API 呼叫與回應
+- Tool Calls 偵測
+- 使用者確認流程
+- 指令執行結果
 
-## 📋 下一階段：Phase 3
+## 📋 未來規劃
 
-- [ ] 設計角色視覺（GIF/PNG）
-- [ ] 實作 PetComponent
-- [ ] 對話氣泡樣式
-- [ ] 淡入淡出動畫
+### 優化與擴充
 - [ ] 角色拖曳功能
+- [ ] 更多工具定義（檔案操作、網路查詢等）
+- [ ] 對話歷史持久化
+- [ ] 使用者偏好設定
+- [ ] 更豐富的動畫效果
+- [ ] 多語言支援
+
+### 進階功能
+- [ ] 角色情緒狀態系統
+- [ ] 更複雜的自主行為模式
+- [ ] 桌面互動（通知、提醒）
+- [ ] 打包為獨立應用程式
 
 ## 📚 技術文件
 
@@ -119,11 +169,15 @@ multiple_agent/
 - `onAgentResponse(callback)` - 監聽 Agent 回應
 - `getSystemInfo()` - 取得系統資訊
 
-**Phase 2 調試方法：**
+**調試方法：**
 - `triggerAutonomousChat()` - 手動觸發自主對話
 - `getChatHistory()` - 取得對話歷史
 - `clearChatHistory()` - 清空對話歷史
 - `resetTimeManager()` - 重置時間管理器
+
+**Phase 4 方法：**
+- `onRequestConfirmation(callback)` - 監聽 CLI 確認請求
+- `sendConfirmation(requestId, approved)` - 發送確認回應
 
 ## 🧠 Backend 系統說明
 
@@ -134,12 +188,14 @@ multiple_agent/
 - 計算自主對話觸發機率
 
 ### AgentManager - Agent 邏輯
+- **Groq API 整合**：使用 llama-3.3-70b-versatile 模型
 - **共享對話歷史**：記錄 User、Agent A、Agent B 的所有對話
 - **發言權分配**：根據關鍵字、輪流機制決定誰回應
 - **雙重人格**：
   - Agent A：暴躁、直接、毒舌但關心人
   - Agent B：溫柔、善解人意、調解者
-- **模擬 API**：Phase 2 使用固定回應測試邏輯
+- **CLI 工具**：execute_terminal_command（需使用者確認）
+- **安全機制**：所有指令執行前都需要使用者批准
 
 ### Autonomy Loop - 自主迴圈
 - 每 30 秒檢查一次
