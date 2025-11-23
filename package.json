@@ -1,12 +1,16 @@
 {
   "name": "multiple-agent",
   "version": "0.0.0",
+  "main": "main.js",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
+    "build": "ng build --base-href ./",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "electron": "chcp 65001 && ng build --base-href ./ && electron .",
+    "electron:build": "ng build && electron .",
+    "electron:dev": "ng build --configuration development && electron ."
   },
   "prettier": {
     "overrides": [
@@ -26,6 +30,8 @@
     "@angular/forms": "^20.1.0",
     "@angular/platform-browser": "^20.1.0",
     "@angular/router": "^20.1.0",
+    "dotenv": "^17.2.3",
+    "groq-sdk": "^0.36.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.15.0"
@@ -35,6 +41,7 @@
     "@angular/cli": "^20.1.5",
     "@angular/compiler-cli": "^20.1.0",
     "@types/jasmine": "~5.1.0",
+    "electron": "^33.2.0",
     "jasmine-core": "~5.8.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",
