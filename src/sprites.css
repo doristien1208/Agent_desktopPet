@@ -1,0 +1,14 @@
+.agent-sprite { --fw:120px; --fh:130px; display:block; width:var(--fw); height:var(--fh); background-image:url('./assets/agent-b-sheet.webp'); background-repeat:no-repeat; background-size:calc(var(--fw) * 8) calc(var(--fh) * 11); background-position-y:calc(var(--row,0) * var(--fh) * -1); pointer-events:none; }
+@keyframes sprite-play { from { background-position-x:0; } to { background-position-x:calc(var(--n) * var(--fw) * -1); } }
+.act-idle { --row:0; --n:6; animation:sprite-play 2.4s steps(6) infinite; }
+.act-run-left { --row:1; --n:8; animation:sprite-play .96s steps(8) infinite; }
+.act-run-right { --row:2; --n:8; animation:sprite-play .96s steps(8) infinite; }
+.act-wave { --row:3; --n:4; animation:sprite-play .8s steps(4) infinite; }
+.act-jump { --row:4; --n:5; animation:sprite-play .9s steps(5) infinite; }
+.act-sleepy { --row:5; --n:8; animation:sprite-play 2.4s steps(8) infinite; }
+.act-ponder { --row:6; --n:6; animation:sprite-play 1.8s steps(6) infinite; }
+.act-think { --row:7; --n:6; animation:sprite-play 1.8s steps(6) infinite; }
+.act-talk { --row:8; --n:6; animation:sprite-play 1.2s steps(6) infinite; }
+.act-daze { --row:9; --n:8; animation:sprite-play 2.4s steps(8) infinite; }
+.act-annoyed { --row:10; --n:8; animation:sprite-play 1.6s steps(8) infinite; }
+

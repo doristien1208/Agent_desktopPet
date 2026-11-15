@@ -8,9 +8,11 @@
     "build": "ng build --base-href ./",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "electron": "chcp 65001 && ng build --base-href ./ && electron .",
-    "electron:build": "ng build && electron .",
-    "electron:dev": "ng build --configuration development && electron ."
+    "electron": "chcp 65001 >nul && ng build --base-href ./ && electron .",
+    "electron:build": "chcp 65001 >nul && ng build --base-href ./ && electron .",
+    "electron:dev": "chcp 65001 >nul && ng build --configuration development --base-href ./ && electron .",
+    "test:backend": "node --test tests/backend.test.cjs tests/main.test.cjs tests/autonomy.test.cjs tests/console-encoding.test.cjs tests/file-search.test.cjs",
+    "test:ui": "node tests/run-ui.cjs"
   },
   "prettier": {
     "overrides": [

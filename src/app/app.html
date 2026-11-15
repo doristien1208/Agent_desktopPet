@@ -1,121 +1,75 @@
-<!-- Phase 3: 桌面寵物介面 -->
-<div class="desktop-pet-container">
-  <div class="main-content">
-    <!-- Agent 區域 -->
-    <div class="agents-area">
-      <!-- Agent A (左側) -->
-      <div class="agent-container agent-a">
-        <img
-          src="assets/agent-a.png"
-          alt="Agent A"
-          class="agent-image"
-          (mouseenter)="onAgentMouseEnter()"
-          (mouseleave)="onAgentMouseLeave()"
-        />
-
-        <!-- Agent A 的對話氣泡 -->
-        @if (showAgentABubble()) {
-          <div class="speech-bubble bubble-a">
-            {{ agentAMessage() }}
-          </div>
+<div class="desktop-shell" [class.expanded]="chatOpen()" [class.configuring]="settingsOpen()">
+  @if (chatOpen() && !settingsOpen()) {
+    <section class="chat-panel" data-interactive aria-label="完整聊天紀錄">
+      <header class="chat-header">
+        <div><span class="eyebrow">DESKTOP COMPANIONS</span><h1>桌邊聊天室 <span class="live-dot"></span></h1></div>
+        <button class="chat-now" (click)="chatNow()" [disabled]="task().busy || !ready()">讓他們聊聊</button>
+        <button class="icon-button" (click)="closeChat()" aria-label="收合聊天面板" title="收合">−</button>
+      </header>
+      <div class="connection"><span>{{ settings().mode === 'local' ? '純本機' : '混合模式' }}</span><span>{{ task().provider ? task().provider + ' · ' + task().model : '羊駝與悠在這裡' }}</span></div>
+      <div class="message-list" #messageList (scroll)="onScroll()" tabindex="0" aria-label="對話內容，可捲動閱讀">
+        @if (!messages().length) {
+          <div class="empty-state"><span class="empty-mark">✦</span><h2>今天，想聊些什麼？</h2><p>點角色就能找到我們。<br>長一點的故事，也能在這裡慢慢看。</p></div>
+        }
+        @for (message of messages(); track message.id) {
+          <article class="message" [class.from-user]="message.role === 'user'" [class.from-system]="message.role === 'system'">
+            <div class="message-meta"><strong>{{ name(message.role) }}</strong><time>{{ message.timestamp | date:'HH:mm' }}</time></div>
+            <div class="message-content">{{ message.content }}</div>
+          </article>
         }
       </div>
-
-      <!-- Agent B (右側) -->
-      <div class="agent-container agent-b">
-        <img
-          src="assets/agent-b.png"
-          alt="Agent B"
-          class="agent-image"
-          (mouseenter)="onAgentMouseEnter()"
-          (mouseleave)="onAgentMouseLeave()"
-        />
-
-        <!-- Agent B 的對話氣泡 -->
-        @if (showAgentBBubble()) {
-          <div class="speech-bubble bubble-b">
-            {{ agentBMessage() }}
-          </div>
-        }
+      @if (newMessages()) { <button class="latest-button" (click)="scrollLatest()">有新訊息 ↓</button> }
+      <div class="task-status" role="status"><span [class.working]="task().busy">{{ task().status }}{{ task().queued ? ' · 等待 ' + task().queued + ' 則' : '' }}</span>@if (task().busy) { <button (click)="stop()">停止全部</button> }</div>
+      <div class="composer">
+        <textarea #composer rows="2" maxlength="8000" [value]="input()" (input)="input.set($any($event.target).value)" (keydown)="onInputKey($event)" placeholder="跟羊駝與悠說說話…" aria-label="輸入訊息" [disabled]="!ready() || clearing()"></textarea>
+        <div class="composer-bottom"><span>Enter 送出 · Shift + Enter 換行</span><button class="send-button" (click)="sendMessage()" [disabled]="!input().trim() || !ready() || clearing()">送出 ↑</button></div>
       </div>
-    </div>
+    </section>
+  }
 
-    <!-- 測試/調試面板 (圖片下方，可收合) -->
-    <div class="debug-panel"
-         [class.collapsed]="isPanelCollapsed()"
-         (mouseenter)="onAgentMouseEnter()"
-         (mouseleave)="onAgentMouseLeave()">
-      <div class="debug-header" (click)="togglePanel()">
-        <h3>測試面板</h3>
-        <span class="toggle-icon">{{ isPanelCollapsed() ? '▼' : '▲' }}</span>
-      </div>
-
-      @if (!isPanelCollapsed()) {
-        <div class="panel-content">
-          <!-- 訊息記錄 -->
-          <div class="messages">
-            @for (msg of messages(); track $index) {
-              <div class="message">{{ msg }}</div>
-            }
-          </div>
-
-          <!-- 輸入區 -->
-          <div class="input-area">
-            <input
-              type="text"
-              [value]="userInput()"
-              (input)="userInput.set($any($event.target).value)"
-              (keyup.enter)="sendMessage()"
-              placeholder="輸入訊息測試..."
-            />
-            <button (click)="sendMessage()">送出</button>
-          </div>
-
-          <!-- 調試按鈕 -->
-          <div class="debug-controls">
-            <button (click)="triggerAutonomousChat()">🎲 自主對話</button>
-            <button (click)="clearHistory()">🗑️ 清空</button>
-            <button (click)="resetTime()">⏰ 重置</button>
-            <button (click)="showSystemInfo()">ℹ️ 資訊</button>
-          </div>
-
-          <p class="status">
-            @if (electronService.isElectron) {
-              <span>✅ Electron</span>
-            } @else {
-              <span>❌ Browser</span>
-            }
-          </p>
-        </div>
-      }
-    </div>
+  @if (bubble() && !chatOpen() && !settingsOpen()) {
+    <button class="speech-bubble" data-interactive (click)="openChat()" (mouseenter)="pauseBubble('hover')" (mouseleave)="resumeBubble('hover')" (focus)="pauseBubble('focus')" (blur)="resumeBubble('focus')" aria-label="開啟完整對話">
+      <strong>{{ name(bubble()!.agent) }}</strong><span class="bubble-text">{{ preview(bubble()!.message) }}</span><span class="bubble-link">查看完整對話 ↗</span>
+    </button>
+  }
+  <div class="pet-stage" aria-label="桌面角色">
+    <button class="pet-character" data-interactive (pointerdown)="startDrag($event)" (pointermove)="dragMove($event)" (pointerup)="finishDrag()" (pointercancel)="cancelDrag()" (keydown.enter)="openChat()" (keydown.space)="openChat()" aria-label="羊駝：點擊聊天，拖曳移動" title="點擊聊天 · 拖曳移動">
+      <img src="assets/agent-a.png" alt="羊駝" draggable="false"><span class="pet-name">羊駝</span>
+    </button>
+    <button class="pet-character" data-interactive (pointerdown)="startDrag($event)" (pointermove)="dragMove($event)" (pointerup)="finishDrag()" (pointercancel)="cancelDrag()" (keydown.enter)="openChat()" (keydown.space)="openChat()" aria-label="悠：點擊聊天，拖曳移動" title="點擊聊天 · 拖曳移動">
+      <span [class]="'agent-sprite act-' + agentBAction()" role="img" aria-label="悠"></span><span class="pet-name">悠</span>
+    </button>
   </div>
-
-  <!-- Phase 4: CLI 確認對話框 -->
-  @if (showConfirmDialog() && confirmRequest()) {
-    <div class="confirm-overlay"
-         (mouseenter)="onAgentMouseEnter()"
-         (mouseleave)="onAgentMouseLeave()">
-      <div class="confirm-dialog">
-        <div class="confirm-header">
-          <h3>🔒 指令執行確認</h3>
-        </div>
-        <div class="confirm-body">
-          <p class="confirm-agent">
-            <strong>Agent {{ confirmRequest()!.agent }}</strong> 想要執行以下指令：
-          </p>
-          <div class="confirm-command">
-            <code>{{ confirmRequest()!.command }}</code>
-          </div>
-          <p class="confirm-warning">
-            ⚠️ 請確認此指令是否安全後再批准執行
-          </p>
-        </div>
-        <div class="confirm-actions">
-          <button class="btn-reject" (click)="rejectCommand()">❌ 拒絕</button>
-          <button class="btn-approve" (click)="approveCommand()">✅ 批准</button>
-        </div>
-      </div>
+  @if (settingsOpen()) {
+    <section class="settings-panel" data-interactive aria-label="桌寵設定">
+      <div class="settings-heading"><strong>桌寵設定</strong><button class="icon-button" (click)="toggleSettings()" aria-label="關閉設定">×</button></div>
+      <label>模型連線<select [value]="settings().mode" (change)="updateSettings({ mode: $any($event.target).value })" [disabled]="task().busy || !ready()"><option value="mixed">混合模式 · 允許雲端</option><option value="local">純本機 · 不傳送至雲端</option></select></label>
+      <p>{{ settings().mode === 'mixed' ? 'NVIDIA 優先規劃與聊天，Groq 可備援聊天。工具交由本機執行；查詢結果及衍生回覆不送往雲端。' : '只使用 Ollama。本機不可用時會停止，不會轉送雲端。' }}</p>
+      <label class="checkbox-label"><input type="checkbox" [checked]="settings().autonomous" (change)="updateSettings({ autonomous: $any($event.target).checked })" [disabled]="task().busy || !ready()">允許主動聊天</label>
+      <label>聊天頻率<select [value]="settings().chatFrequency" (change)="updateSettings({ chatFrequency: $any($event.target).value })" [disabled]="task().busy || !ready()"><option value="lively">活潑 · 30–60 秒</option><option value="normal">一般 · 1–2 分鐘</option><option value="quiet">安靜 · 3–5 分鐘</option></select></label>
+      <p>每輪交替說 4 句，收到你的訊息就先回應你。</p>
+      <label class="checkbox-label"><input type="checkbox" [checked]="settings().rememberHistory" (change)="updateSettings({ rememberHistory: $any($event.target).checked })" [disabled]="task().busy || !ready()">在這台電腦保存最近 200 則對話</label>
+      <p>預設不保存。開啟後以本機文字檔保存；關閉會移除已儲存的紀錄。尋找檔案位置免確認；修改、刪除與一般終端指令需授權。</p>
+      <button class="clear-button" (click)="clearHistory()" [disabled]="clearing() || !ready()">清空對話並停止任務</button>
+    </section>
+  }
+  @if (error()) { <div class="error-message" data-interactive role="alert">{{ error() }}<button (click)="error.set('')" aria-label="關閉提示">×</button></div> }
+  <nav class="dock" data-interactive aria-label="桌寵控制">
+    <button class="chat-toggle" (click)="chatOpen() ? closeChat() : openChat()"><span class="dock-star">✦</span>{{ chatOpen() ? '收起聊天' : '聊一聊' }}@if (unread()) { <span class="unread">{{ unread() > 99 ? '99+' : unread() }}</span> }</button>
+    <span class="dock-mode">{{ task().busy ? '思考／操作中' : settings().mode === 'local' ? '本機陪伴' : '混合模式' }}</span>
+    @if (task().busy && (!chatOpen() || settingsOpen())) { <button class="icon-button" (click)="stop()" title="停止全部" aria-label="停止全部任務">■</button> }
+    <button class="icon-button" (click)="toggleSettings()" [attr.aria-expanded]="settingsOpen()" aria-label="設定" title="設定">⚙</button>
+  </nav>
+  @if (confirm()) {
+    <div class="confirm-overlay" data-interactive>
+      <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-description">
+        <span class="eyebrow">需要你的同意</span><h2 id="confirm-title">{{ confirm()!.agent }}想操作電腦</h2>
+        <p id="confirm-description">請閱讀完整指令，再決定是否執行。兩分鐘未回覆會自動取消。</p>
+        <pre class="confirm-command" tabindex="0">{{ confirm()!.command }}</pre>
+        <p class="confirmation-note">{{ confirm()!.cloud ? '這次由雲端模型處理，指令結果會回傳雲端。' : '這次由本機模型處理指令結果。' }}</p>
+        <p>停止只能中止後續操作，無法復原已完成的變更。</p>
+        <div class="confirm-actions"><button id="reject-command" (click)="decide(false)">拒絕並停止</button><button class="approve" (click)="decide(true)">允許這道指令</button></div>
+      </section>
     </div>
   }
 </div>

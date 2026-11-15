@@ -7,6 +7,40 @@ class TimeManager {
   constructor() {
     this.lastInteractionTime = Date.now();
     this.sessionStartTime = Date.now();
+    this.systemIdleProvider = null; // 由 main.js 注入 powerMonitor
+  }
+
+  /**
+   * 注入系統閒置時間提供者（Electron powerMonitor.getSystemIdleTime）
+   * 用系統 API 判斷使用者是否在操作電腦，不需執行任何 CLI 指令
+   * @param {Function} provider - 回傳系統閒置秒數的函數
+   */
+  setSystemIdleProvider(provider) {
+    this.systemIdleProvider = provider;
+  }
+
+  /**
+   * 取得使用者活動狀態描述（基於全系統的鍵盤/滑鼠閒置時間）
+   * @returns {string|null} 活動狀態文字，無 provider 時返回 null
+   */
+  getUserActivityStatus() {
+    if (!this.systemIdleProvider) return null;
+
+    try {
+      const idleSeconds = this.systemIdleProvider();
+
+      if (idleSeconds < 60) {
+        return '使用者目前正在操作電腦（剛剛還有鍵盤滑鼠活動）。';
+      }
+      if (idleSeconds < 300) {
+        const min = Math.floor(idleSeconds / 60);
+        return `使用者大約 ${min} 分鐘沒有碰電腦了，可能在忙別的事。`;
+      }
+      const min = Math.floor(idleSeconds / 60);
+      return `使用者已經離開電腦約 ${min} 分鐘了。`;
+    } catch (e) {
+      return null;
+    }
   }
 
   /**
@@ -105,43 +139,16 @@ class TimeManager {
 
     // 30分鐘 - 2小時
     if (minutes < 120) {
-      return `[你離開了 ${minutes} 分鐘，現在是 ${timeInfo.timeOfDay} ${timeInfo.formattedTime}，感覺有點寂寞...]`;
+      return `[距離上次對話 ${minutes} 分鐘，現在是 ${timeInfo.timeOfDay} ${timeInfo.formattedTime}，感覺有點寂寞...]`;
     }
 
     // 2小時 - 6小時
     if (hours < 6) {
-      return `[你已經消失了 ${hours} 小時！現在是 ${timeInfo.timeOfDay} ${timeInfo.formattedTime}，發生了什麼事嗎？]`;
+      return `[距離上次對話已經 ${hours} 小時。現在是 ${timeInfo.timeOfDay} ${timeInfo.formattedTime}，發生了什麼事嗎？]`;
     }
 
     // 6小時以上
-    return `[你離開了整整 ${hours} 小時... 現在是 ${timeInfo.timeOfDay} ${timeInfo.formattedTime}，我們好想你！]`;
-  }
-
-  /**
-   * 檢查是否應該觸發自主對話
-   * 根據時間長短和隨機機率決定
-   * @returns {boolean}
-   */
-  shouldTriggerAutonomousChat() {
-    const minutes = this.getTimeSinceLastInteractionInMinutes();
-
-    // 5分鐘內，低機率 (10%)
-    if (minutes < 5) {
-      return Math.random() < 0.10;
-    }
-
-    // 5-15分鐘，中機率 (30%)
-    if (minutes < 15) {
-      return Math.random() < 0.30;
-    }
-
-    // 15-30分鐘，高機率 (50%)
-    if (minutes < 30) {
-      return Math.random() < 0.50;
-    }
-
-    // 30分鐘以上，非常高機率 (70%)
-    return Math.random() < 0.70;
+    return `[距離上次對話已經 ${hours} 小時... 現在是 ${timeInfo.timeOfDay} ${timeInfo.formattedTime}，我們好想你！]`;
   }
 
   /**
@@ -159,7 +166,11 @@ class TimeManager {
       context += ` ${narration}`;
     }
 
-    if (seconds < 60) {
+    // 使用者活動狀態（系統 API，比「距離上次對話」更準確）
+    const activity = this.getUserActivityStatus();
+    if (activity) {
+      context += ` ${activity}`;
+    } else if (seconds < 60) {
       context += ` 使用者剛剛還在活躍中。`;
     }
 
